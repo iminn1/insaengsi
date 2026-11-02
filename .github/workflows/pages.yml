@@ -18,6 +18,12 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - name: Stamp build version (cache busting)
+        run: |
+          V=${GITHUB_SHA::7}
+          sed -i "s/__BUILD__/$V/g" index.html
+          echo "{\"v\":\"$V\"}" > version.json
+          rm -rf tools docs .github
       - uses: actions/configure-pages@v5
         with:
           enablement: true

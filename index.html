@@ -236,10 +236,20 @@
   </div>
 </div>
 
-<script src="days.js"></script>
-<script src="config.js"></script>
+<script src="days.js?v=__BUILD__"></script>
+<script src="config.js?v=__BUILD__"></script>
 <script>
 (function(){
+  // ---- 최신 버전 확인: 배포본이 바뀌었으면 한 번 새로고침 (브라우저/CDN 캐시 우회) ----
+  const BUILD='__BUILD__';
+  if(BUILD && !BUILD.startsWith('__')){
+    fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(j=>{
+      if(j && j.v && j.v!==BUILD){
+        let last=0; try{ last=Number(sessionStorage.getItem('insaengsi.reloaded')||0); }catch(e){}
+        if(Date.now()-last>60000){ try{ sessionStorage.setItem('insaengsi.reloaded',String(Date.now())); }catch(e){} location.reload(); }
+      }
+    }).catch(()=>{});
+  }
   const P = window.PROGRAM;
   const API = window.API_URL || "";
   const $ = (s)=>document.querySelector(s);
