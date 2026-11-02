@@ -296,14 +296,14 @@
       bgm.volume=Math.max(0,Math.min(1,bgm.volume+Math.sign(d)*0.02));
     }
     function sync(){
-      const want=bgmOn && voicePlaying();
+      const want=bgmOn && voicePlaying() && voice!=='human'; // 모임 낭독에는 음악이 이미 들어 있음
       target=want?BGM_VOL:0;
       if(want && bgm.paused){ bgm.volume=0; bgm.play().catch(()=>{}); }
       if(!ticker) ticker=setInterval(tick,100);
     }
     // iPhone: 음악은 사용자 터치 안에서 한 번 play()가 불려야 허용됨. 음량 0으로 깨워 두고, 실제 음량은 sync가 결정.
     let primedUntil=0;
-    function bgmPrime(){ if(!bgmOn) return; primedUntil=Date.now()+2000; if(bgm.paused){ bgm.volume=0; bgm.play().catch(()=>{}); } if(!ticker) ticker=setInterval(tick,100); }
+    function bgmPrime(){ if(!bgmOn || voice==='human') return; primedUntil=Date.now()+2000; if(bgm.paused){ bgm.volume=0; bgm.play().catch(()=>{}); } if(!ticker) ticker=setInterval(tick,100); }
     ['play','playing','pause','ended','error','emptied','waiting'].forEach(ev=>a.addEventListener(ev,sync));
     function stop(){ try{ a.pause(); }catch(e){} cur=null; sync(); }
     return { a, bgm, VOICES, src, stop, getVoice:()=>voice, setVoice:(v)=>{ voice=v; try{localStorage.setItem('insaengsi.voice',v);}catch(e){} }, cur:()=>cur, setCur:(k)=>{cur=k; sync();},
@@ -323,6 +323,7 @@
     const m=document.createElement('button'); m.className='btn ghost'; m.title='배경음악 켜기/끄기';
     const mRender=()=>{ m.textContent=AUDIO.bgmOn()?'♪ 배경음악 켬':'♪ 배경음악 끔'; m.style.opacity=AUDIO.bgmOn()?'1':'.6'; };
     mRender(); m.onclick=()=>{ AUDIO.setBgm(!AUDIO.bgmOn()); mRender(); };
+    const mVis=()=>{ m.style.display=AUDIO.getVoice()==='human'?'none':''; }; mVis();
     const t=document.createElement('span'); t.textContent='';
     el.append(b,s,r,v,m,t);
     const mine=()=>AUDIO.cur()===key;
@@ -356,7 +357,7 @@
     };
     s.onclick=()=>{ AUDIO.stop(); reset(); };
     r.onchange=()=>{ a.playbackRate=Number(r.value); };
-    v.onchange=()=>{ const was=mine()&&!a.paused; const at=mine()?a.currentTime:0; AUDIO.setVoice(v.value); if(mine()){ AUDIO.stop(); AUDIO.setCur(key); a.src=AUDIO.src(key); a.currentTime=at; a.playbackRate=Number(r.value); if(was) a.play().catch(()=>{}); } };
+    v.onchange=()=>{ mVis(); const was=mine()&&!a.paused; const at=mine()?a.currentTime:0; AUDIO.setVoice(v.value); if(mine()){ AUDIO.stop(); AUDIO.setCur(key); a.src=AUDIO.src(key); a.currentTime=at; a.playbackRate=Number(r.value); if(was) a.play().catch(()=>{}); } };
     if(mine()){ b.textContent=a.paused?'▶ 이어 듣기':'❚❚ 일시정지'; s.style.display=''; onTime(); }
   }
 
