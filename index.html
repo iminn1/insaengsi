@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>인생시 — 삶의 의미를 묻는 19일</title>
+<title>인생시 — 삶의 의미를 묻는 15일</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
@@ -291,9 +291,9 @@
     function bgmStart(){ if(!bgmOn) return; clearInterval(fadeTimer); bgm.volume=0; bgm.play().then(()=>{ fadeTimer=setInterval(()=>{ bgm.volume=Math.min(BGM_VOL,bgm.volume+0.02); if(bgm.volume>=BGM_VOL) clearInterval(fadeTimer); },100); }).catch(()=>{}); }
     function bgmStop(){ clearInterval(fadeTimer); if(bgm.paused) return; fadeTimer=setInterval(()=>{ bgm.volume=Math.max(0,bgm.volume-0.02); if(bgm.volume<=0){ clearInterval(fadeTimer); bgm.pause(); } },100); }
     a.addEventListener('play',bgmStart); a.addEventListener('pause',bgmStop); a.addEventListener('ended',bgmStop); a.addEventListener('error',bgmStop);
-    function stop(){ try{ a.pause(); }catch(e){} a.removeAttribute('src'); a.load(); cur=null; bgmStop(); }
+    function stop(){ try{ a.pause(); }catch(e){} cur=null; bgmStop(); }
     return { a, VOICES, src, stop, getVoice:()=>voice, setVoice:(v)=>{ voice=v; try{localStorage.setItem('insaengsi.voice',v);}catch(e){} }, cur:()=>cur, setCur:(k)=>{cur=k;},
-      bgmOn:()=>bgmOn, setBgm:(on)=>{ bgmOn=on; try{localStorage.setItem('insaengsi.bgm',on?'on':'off');}catch(e){} if(on&&!a.paused) bgmStart(); else bgmStop(); } };
+      bgmStart, bgmOn:()=>bgmOn, setBgm:(on)=>{ bgmOn=on; try{localStorage.setItem('insaengsi.bgm',on?'on':'off');}catch(e){} if(on&&!a.paused) bgmStart(); else bgmStop(); } };
   })();
   const mmss=(s)=>{ s=Math.max(0,Math.floor(s||0)); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; };
 
@@ -314,18 +314,30 @@
     const reset=()=>{ b.textContent='▶ 듣기'; s.style.display='none'; t.textContent=''; };
     const onTime=()=>{ if(mine()) t.textContent=`${mmss(a.currentTime)} / ${isFinite(a.duration)?mmss(a.duration):'…'}`; };
     const onEnd=()=>{ if(mine()){ reset(); AUDIO.setCur(null); } };
-    const onErr=()=>{ if(!mine()) return; AUDIO.setCur(null); el.innerHTML=''; mountListenTTS(el, paragraphs, highlightEl); };
+    const onErr=()=>{ if(!mine()) return; clearTimeout(watchdog); const code=a.error&&a.error.code; AUDIO.setCur(null);
+      // 4 = 파일 없음/형식 미지원 → 기기 음성으로 대체. 그 외(네트워크 등)는 안내
+      if(code===4||!code){ el.innerHTML=''; mountListenTTS(el, paragraphs, highlightEl); } else fail('음성 파일을 불러오지 못했습니다 (오류 '+code+'). 다시 눌러 보시거나'); };
     const onPause=()=>{ if(mine()&&!a.ended) b.textContent='▶ 이어 듣기'; };
     const onPlay=()=>{ if(mine()){ b.textContent='❚❚ 일시정지'; s.style.display=''; } };
     // 이전에 붙인 리스너 제거 후 새로 연결 (한 번에 하나의 플레이어만 활성)
     if(AUDIO.bound) Object.entries(AUDIO.bound).forEach(([ev,fn])=>a.removeEventListener(ev,fn));
     AUDIO.bound={timeupdate:onTime,ended:onEnd,error:onErr,pause:onPause,play:onPlay};
     Object.entries(AUDIO.bound).forEach(([ev,fn])=>a.addEventListener(ev,fn));
+    let watchdog=null;
+    const fail=(why)=>{ clearTimeout(watchdog); if(!mine()) return; AUDIO.stop(); reset();
+      t.innerHTML=`${esc(why)} <a href="${AUDIO.src(key)}" target="_blank" rel="noopener">파일 직접 열기</a>`; };
     b.onclick=()=>{
-      if(mine()){ if(a.paused) a.play().catch(()=>{}); else a.pause(); return; }
+      if(mine()){ if(a.paused) a.play().catch(e=>fail('재생할 수 없습니다 ('+e.name+')')); else a.pause(); return; }
       TTS.stop(); AUDIO.stop(); AUDIO.setCur(key);
-      a.src=AUDIO.src(key); a.playbackRate=Number(r.value); t.textContent='불러오는 중…';
-      a.play().catch(()=>{ /* error 이벤트에서 대체 처리 */ });
+      t.textContent='불러오는 중…';
+      a.preload='auto'; a.src=AUDIO.src(key);
+      const applyRate=()=>{ try{ a.playbackRate=Number(r.value); }catch(e){} };
+      a.addEventListener('loadedmetadata',applyRate,{once:true});
+      clearTimeout(watchdog); watchdog=setTimeout(()=>{ if(mine()&&a.currentTime===0) fail('재생이 시작되지 않았습니다. 다시 눌러 보시거나'); },10000);
+      a.addEventListener('playing',()=>clearTimeout(watchdog),{once:true});
+      AUDIO.bgmStart(); // 사용자 터치 안에서 시작해야 iPhone에서 배경음악이 허용됨
+      const pr=a.play();
+      if(pr&&pr.catch) pr.catch(e=>{ if(e&&e.name==='NotAllowedError') fail('브라우저가 자동 재생을 막았습니다. 한 번 더 눌러 보시거나'); else if(e&&e.name!=='AbortError') fail('재생할 수 없습니다 ('+(e.name||'')+'). 또는'); });
     };
     s.onclick=()=>{ AUDIO.stop(); reset(); };
     r.onchange=()=>{ a.playbackRate=Number(r.value); };
