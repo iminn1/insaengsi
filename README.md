@@ -51,3 +51,6 @@
 ## 구절·질문 수정
 
 `days.js` 를 고치면 됩니다. 날짜(`startDate`, `finalOpen`, `finalClose`, `presentationDate`)도 여기서 바꿉니다.
+
+## 배경음악
+`audio/bgm.mp3` — "Warm Light" by David Fesliyan (FesliyanStudios.com). 앱은 이 파일을 음성 재생 중에만 낮은 음량으로 반복 재생합니다. 다른 곡으로 바꾸려면 이 파일만 교체하면 됩니다.

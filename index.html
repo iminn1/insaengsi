@@ -285,7 +285,7 @@
     let voice='sunhi'; try{ voice=localStorage.getItem('insaengsi.voice')||'sunhi'; }catch(e){}
     function src(key){ return `audio/${voice}/${key}.mp3`; }
     // 배경음악: 별도 루프 트랙, 낮은 음량. 음성 재생 중에만 흐르고 멈추면 서서히 사라짐
-    const bgm=new Audio('audio/bgm.mp3'); bgm.loop=true; bgm.preload='none'; const BGM_VOL=0.18;
+    const bgm=new Audio('audio/bgm.mp3'); bgm.loop=true; bgm.preload='none'; const BGM_VOL=0.16;
     let bgmOn=true; try{ bgmOn=localStorage.getItem('insaengsi.bgm')!=='off'; }catch(e){}
     let fadeTimer=null;
     function bgmStart(){ if(!bgmOn) return; clearInterval(fadeTimer); bgm.volume=0; bgm.play().then(()=>{ fadeTimer=setInterval(()=>{ bgm.volume=Math.min(BGM_VOL,bgm.volume+0.02); if(bgm.volume>=BGM_VOL) clearInterval(fadeTimer); },100); }).catch(()=>{}); }
