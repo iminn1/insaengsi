@@ -306,7 +306,7 @@
     function bgmPrime(){ if(!bgmOn) return; primedUntil=Date.now()+2000; if(bgm.paused){ bgm.volume=0; bgm.play().catch(()=>{}); } if(!ticker) ticker=setInterval(tick,100); }
     ['play','playing','pause','ended','error','emptied','waiting'].forEach(ev=>a.addEventListener(ev,sync));
     function stop(){ try{ a.pause(); }catch(e){} cur=null; sync(); }
-    return { a, VOICES, src, stop, getVoice:()=>voice, setVoice:(v)=>{ voice=v; try{localStorage.setItem('insaengsi.voice',v);}catch(e){} }, cur:()=>cur, setCur:(k)=>{cur=k; sync();},
+    return { a, bgm, VOICES, src, stop, getVoice:()=>voice, setVoice:(v)=>{ voice=v; try{localStorage.setItem('insaengsi.voice',v);}catch(e){} }, cur:()=>cur, setCur:(k)=>{cur=k; sync();},
       bgmPrime, bgmOn:()=>bgmOn, setBgm:(on)=>{ bgmOn=on; try{localStorage.setItem('insaengsi.bgm',on?'on':'off');}catch(e){} sync(); } };
   })();
   window.__AUDIO=AUDIO; // 진단용
