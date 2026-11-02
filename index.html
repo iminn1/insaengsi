@@ -382,6 +382,11 @@
   let token=null, myName='', mine={}; // mine[day] = item
   try{ token=localStorage.getItem('insaengsi.token'); myName=localStorage.getItem('insaengsi.name')||''; }catch(e){}
   let curDay = Math.max(1,todayIdx);
+  const drafts={}; // day -> {text,pub} : 저장 전 입력 내용 보관
+  const saveDraft=()=>{ drafts[String(curDay)]={text:$('#t-textarea').value, pub:$('#t-public').checked}; };
+  $('#t-textarea').addEventListener('input',saveDraft); $('#t-public').addEventListener('change',saveDraft);
+  const saveFinalDraft=()=>{ drafts['final']={text:$('#f-textarea').value, pub:$('#f-public').checked}; };
+  $('#f-textarea').addEventListener('input',saveFinalDraft); $('#f-public').addEventListener('change',saveFinalDraft);
 
   // ---- API ----
   async function api(req){
@@ -492,9 +497,10 @@
     if(locked){
       $('#t-locked').textContent = todayIdx<1 ? `${fmt(START)}에 시작합니다. 그날 첫 구절이 열립니다. (지금은 미리 읽기만 가능)` : `이 구절은 ${fmt(date)}에 열립니다.`;
     } else {
-      const m=mine[String(curDay)];
-      $('#t-textarea').value = m?m.text:'';
-      $('#t-public').checked = m?!!m.isPublic:false;
+      const m=mine[String(curDay)], dr=drafts[String(curDay)];
+      // 입력 중인 초안이 있으면 서버 데이터로 덮어쓰지 않음
+      $('#t-textarea').value = dr?dr.text:(m?m.text:'');
+      $('#t-public').checked = dr?dr.pub:(m?!!m.isPublic:false);
       $('#t-delete').classList.toggle('hidden',!m);
       setStatus($('#t-status'), m?`저장됨 · ${m.isPublic?'공개':'비공개'} · ${(m.updatedAt||'').slice(0,10)}`:'' , m?'ok':'');
     }
@@ -510,14 +516,14 @@
     $('#t-save').disabled=true; setStatus($('#t-status'),'저장 중…');
     try{
       const j=await api({action:'submit',day:String(curDay),text,isPublic:$('#t-public').checked});
-      mine[String(curDay)]=j.item; renderToday();
+      mine[String(curDay)]=j.item; delete drafts[String(curDay)]; renderToday();
     }catch(e){ setStatus($('#t-status'),e.message,'err'); }
     $('#t-save').disabled=false;
   };
   $('#t-delete').onclick = async ()=>{
     if(!mine[String(curDay)]) return;
     if(!$('#t-delete').dataset.confirm){ $('#t-delete').dataset.confirm='1'; $('#t-delete').textContent='정말 삭제'; setTimeout(()=>{delete $('#t-delete').dataset.confirm; $('#t-delete').textContent='삭제';},3000); return; }
-    try{ await api({action:'remove',day:String(curDay)}); delete mine[String(curDay)]; renderToday(); }catch(e){ setStatus($('#t-status'),e.message,'err'); }
+    try{ await api({action:'remove',day:String(curDay)}); delete mine[String(curDay)]; delete drafts[String(curDay)]; renderToday(); }catch(e){ setStatus($('#t-status'),e.message,'err'); }
     delete $('#t-delete').dataset.confirm; $('#t-delete').textContent='삭제';
   };
 
@@ -539,7 +545,7 @@
     const open = TODAY>=FINAL_OPEN && TODAY<=FINAL_CLOSE;
     $('#f-write').classList.toggle('hidden',!open); $('#f-locked').classList.toggle('hidden',open);
     if(!open) $('#f-locked').textContent = TODAY<FINAL_OPEN ? `마무리 글은 ${fmt(FINAL_OPEN)}부터 ${fmt(FINAL_CLOSE)}까지 적을 수 있습니다.` : `제출이 마감되었습니다. ${fmt(parseISO(P.presentationDate))} 발표에서 만나요.`;
-    const m=mine['final']; if(m){ $('#f-textarea').value=m.text; $('#f-public').checked=!!m.isPublic; setStatus($('#f-status'),`저장됨 · ${m.isPublic?'공개':'비공개'}`,'ok'); }
+    const m=mine['final'], fd=drafts['final']; if(fd){ $('#f-textarea').value=fd.text; $('#f-public').checked=fd.pub; } else if(m){ $('#f-textarea').value=m.text; $('#f-public').checked=!!m.isPublic; setStatus($('#f-status'),`저장됨 · ${m.isPublic?'공개':'비공개'}`,'ok'); }
     try{
       const j=await api({action:'public',day:'final'});
       const C=$('#f-collective');
@@ -549,7 +555,7 @@
   $('#f-save').onclick = async ()=>{
     const text=$('#f-textarea').value.trim(); if(!text) return setStatus($('#f-status'),'내용을 적어 주세요.','err');
     $('#f-save').disabled=true; setStatus($('#f-status'),'저장 중…');
-    try{ const j=await api({action:'submit',day:'final',text,isPublic:$('#f-public').checked}); mine['final']=j.item; renderFinal(); }
+    try{ const j=await api({action:'submit',day:'final',text,isPublic:$('#f-public').checked}); mine['final']=j.item; delete drafts['final']; renderFinal(); }
     catch(e){ setStatus($('#f-status'),e.message,'err'); }
     $('#f-save').disabled=false;
   };
