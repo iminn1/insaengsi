@@ -287,13 +287,27 @@
     // 배경음악: 별도 루프 트랙, 낮은 음량. 음성 재생 중에만 흐르고 멈추면 서서히 사라짐
     const bgm=new Audio('audio/bgm.mp3'); bgm.loop=true; bgm.preload='none'; const BGM_VOL=0.16;
     let bgmOn=true; try{ bgmOn=localStorage.getItem('insaengsi.bgm')!=='off'; }catch(e){}
-    let fadeTimer=null;
-    function bgmStart(){ if(!bgmOn) return; clearInterval(fadeTimer); bgm.volume=0; bgm.play().then(()=>{ fadeTimer=setInterval(()=>{ bgm.volume=Math.min(BGM_VOL,bgm.volume+0.02); if(bgm.volume>=BGM_VOL) clearInterval(fadeTimer); },100); }).catch(()=>{}); }
-    function bgmStop(){ clearInterval(fadeTimer); if(bgm.paused) return; fadeTimer=setInterval(()=>{ bgm.volume=Math.max(0,bgm.volume-0.02); if(bgm.volume<=0){ clearInterval(fadeTimer); bgm.pause(); } },100); }
-    a.addEventListener('play',bgmStart); a.addEventListener('pause',bgmStop); a.addEventListener('ended',bgmStop); a.addEventListener('error',bgmStop);
-    function stop(){ try{ a.pause(); }catch(e){} cur=null; bgmStop(); }
-    return { a, VOICES, src, stop, getVoice:()=>voice, setVoice:(v)=>{ voice=v; try{localStorage.setItem('insaengsi.voice',v);}catch(e){} }, cur:()=>cur, setCur:(k)=>{cur=k;},
-      bgmStart, bgmOn:()=>bgmOn, setBgm:(on)=>{ bgmOn=on; try{localStorage.setItem('insaengsi.bgm',on?'on':'off');}catch(e){} if(on&&!a.paused) bgmStart(); else bgmStop(); } };
+    // 단일 상태: "낭독이 실제로 재생 중이고 배경음악이 켜져 있는가" → 목표 음량. 100ms마다 목표를 향해 부드럽게 이동.
+    let target=0, ticker=null;
+    const voicePlaying=()=>cur!==null && !a.paused && !a.ended;
+    function tick(){
+      const d=target-bgm.volume;
+      if(Math.abs(d)<=0.02){ bgm.volume=target; if(target===0 && Date.now()>primedUntil){ if(!bgm.paused) bgm.pause(); clearInterval(ticker); ticker=null; } return; }
+      bgm.volume=Math.max(0,Math.min(1,bgm.volume+Math.sign(d)*0.02));
+    }
+    function sync(){
+      const want=bgmOn && voicePlaying();
+      target=want?BGM_VOL:0;
+      if(want && bgm.paused){ bgm.volume=0; bgm.play().catch(()=>{}); }
+      if(!ticker) ticker=setInterval(tick,100);
+    }
+    // iPhone: 음악은 사용자 터치 안에서 한 번 play()가 불려야 허용됨. 음량 0으로 깨워 두고, 실제 음량은 sync가 결정.
+    let primedUntil=0;
+    function bgmPrime(){ if(!bgmOn) return; primedUntil=Date.now()+2000; if(bgm.paused){ bgm.volume=0; bgm.play().catch(()=>{}); } if(!ticker) ticker=setInterval(tick,100); }
+    ['play','playing','pause','ended','error','emptied','waiting'].forEach(ev=>a.addEventListener(ev,sync));
+    function stop(){ try{ a.pause(); }catch(e){} cur=null; sync(); }
+    return { a, VOICES, src, stop, getVoice:()=>voice, setVoice:(v)=>{ voice=v; try{localStorage.setItem('insaengsi.voice',v);}catch(e){} }, cur:()=>cur, setCur:(k)=>{cur=k; sync();},
+      bgmPrime, bgmOn:()=>bgmOn, setBgm:(on)=>{ bgmOn=on; try{localStorage.setItem('insaengsi.bgm',on?'on':'off');}catch(e){} sync(); } };
   })();
   const mmss=(s)=>{ s=Math.max(0,Math.floor(s||0)); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; };
 
@@ -335,7 +349,7 @@
       a.addEventListener('loadedmetadata',applyRate,{once:true});
       clearTimeout(watchdog); watchdog=setTimeout(()=>{ if(mine()&&a.currentTime===0) fail('재생이 시작되지 않았습니다. 다시 눌러 보시거나'); },10000);
       a.addEventListener('playing',()=>clearTimeout(watchdog),{once:true});
-      AUDIO.bgmStart(); // 사용자 터치 안에서 시작해야 iPhone에서 배경음악이 허용됨
+      AUDIO.bgmPrime(); // 사용자 터치 안에서 깨워야 iPhone에서 배경음악이 허용됨
       const pr=a.play();
       if(pr&&pr.catch) pr.catch(e=>{ if(e&&e.name==='NotAllowedError') fail('브라우저가 자동 재생을 막았습니다. 한 번 더 눌러 보시거나'); else if(e&&e.name!=='AbortError') fail('재생할 수 없습니다 ('+(e.name||'')+'). 또는'); });
     };
