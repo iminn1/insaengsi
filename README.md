@@ -56,5 +56,5 @@
 `audio/bgm.mp3` — "Warm Light" by David Fesliyan (FesliyanStudios.com). 앱은 이 파일을 음성 재생 중에만 낮은 음량으로 반복 재생합니다. 다른 곡으로 바꾸려면 이 파일만 교체하면 됩니다.
 
 ## 낭독 음성
-- `audio/human/` — 모임 구성원 낭독(기본, 배경음악 포함 원본). 음량 정규화 후 문단 단위로 분할. 이 음성에서는 앱 배경음악이 꺼짐. 처리 절차: `docs/낭독대본.md` 참고.
+- `audio/human/` — 모임 구성원 낭독(기본, 배경음악 포함). 60 Hz 험·85 Hz 이하 저역 제거 + 음량 정규화 후 문단 단위로 분할. 이 음성에서는 앱 배경음악이 꺼짐. 처리 절차: `docs/낭독대본.md` 참고.
 - `audio/sunhi/`, `audio/injoon/` — AI 음성(예비). `tools/make_audio.py` 로 생성.
