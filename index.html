@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>인생시 — 삶의 의미를 묻는 19일</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f7f3ea; --paper2:#fffdf8; --ink:#2a2521; --ink2:#5d554d; --ink3:#948a7e;
+    --line:#e3dccf; --accent:#4b6b55; --accent2:#e9efe9; --warn:#a2552d;
+    --radius:14px; --shadow:0 1px 2px rgba(40,30,20,.05),0 8px 24px rgba(40,30,20,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--paper);color:var(--ink);font-family:'Noto Sans KR',system-ui,sans-serif;font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  .wrap{max-width:640px;margin:0 auto;padding:16px 16px 48px}
+  header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:8px 0 14px}
+  header h1{font-family:'Noto Serif KR',serif;font-weight:600;font-size:20px;margin:0;letter-spacing:-.01em}
+  header h1 small{display:block;font-family:'Noto Sans KR',sans-serif;font-weight:400;font-size:12px;color:var(--ink3);margin-top:2px}
+  .who{font-size:13px;color:var(--ink2);white-space:nowrap}
+  .who button{background:none;border:0;color:var(--ink3);text-decoration:underline;cursor:pointer;font-size:12px;padding:0 0 0 6px}
+  nav.tabs{display:flex;gap:4px;background:var(--line);padding:4px;border-radius:999px;margin-bottom:18px}
+  nav.tabs button{flex:1;border:0;background:transparent;padding:9px 6px;border-radius:999px;font-size:14px;font-weight:500;color:var(--ink2);cursor:pointer}
+  nav.tabs button.on{background:var(--paper2);color:var(--ink);box-shadow:var(--shadow)}
+  .card{background:var(--paper2);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin-bottom:16px}
+  .eyebrow{font-size:12px;letter-spacing:.08em;color:var(--accent);font-weight:700;text-transform:uppercase}
+  .week{font-size:13px;color:var(--ink3);margin-top:2px}
+  .poem{font-family:'Noto Serif KR',serif;font-size:19px;line-height:1.85;margin:14px 0 6px;word-break:keep-all;color:var(--ink)}
+  .poem .theme{display:inline-block;font-size:12px;color:var(--ink3);font-family:'Noto Sans KR',sans-serif;margin-bottom:6px}
+  .author{text-align:right;font-size:13px;color:var(--ink3);margin-bottom:10px}
+  .question{background:var(--accent2);border-left:3px solid var(--accent);padding:12px 14px;border-radius:0 10px 10px 0;font-size:15px;color:var(--ink);word-break:keep-all}
+  .question b{color:var(--accent);font-size:12px;letter-spacing:.06em;display:block;margin-bottom:4px}
+  textarea{width:100%;min-height:150px;resize:vertical;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font:inherit;font-size:16px;line-height:1.7;background:#fff;color:var(--ink);margin-top:14px}
+  textarea:focus,input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;flex-wrap:wrap}
+  label.chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink2);cursor:pointer}
+  label.chk input{width:18px;height:18px;accent-color:var(--accent)}
+  .btn{border:0;border-radius:10px;padding:11px 18px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;background:var(--accent);color:#fff}
+  .btn:disabled{opacity:.5;cursor:default}
+  .btn.ghost{background:transparent;color:var(--ink2);border:1px solid var(--line);font-weight:500}
+  .btn.sm{padding:7px 12px;font-size:13px}
+  .status{font-size:13px;color:var(--ink3);min-height:18px;margin-top:8px}
+  .status.ok{color:var(--accent)} .status.err{color:var(--warn)}
+  .days{display:grid;grid-template-columns:repeat(10,1fr);gap:6px;margin:4px 0 14px}
+  .days button{aspect-ratio:1;border-radius:8px;border:1px solid var(--line);background:#fff;font-size:13px;color:var(--ink2);cursor:pointer;position:relative;padding:0}
+  .days button.done{background:var(--accent2);border-color:#c9d8cc;color:var(--accent);font-weight:700}
+  .days button.cur{outline:2px solid var(--accent);outline-offset:-1px;color:var(--ink);font-weight:700}
+  .days button.lock{color:#cfc7ba;background:transparent;cursor:default}
+  .days button.today::after{content:"";position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--accent)}
+  .list .item{padding:14px 0;border-top:1px solid var(--line)}
+  .list .item:first-child{border-top:0;padding-top:0}
+  .item .meta{font-size:12px;color:var(--ink3);display:flex;justify-content:space-between;gap:8px}
+  .item .meta b{color:var(--ink2);font-weight:600}
+  .item .txt{white-space:pre-wrap;word-break:keep-all;margin-top:4px;font-size:15px}
+  .empty{color:var(--ink3);font-size:14px;text-align:center;padding:20px 0}
+  input[type=text],input[type=password],input[type=tel]{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 14px;font:inherit;font-size:16px;background:#fff;color:var(--ink)}
+  .field{margin-top:12px}
+  .field label{display:block;font-size:13px;color:var(--ink2);margin-bottom:5px}
+  .hint{font-size:13px;color:var(--ink3);margin-top:10px;word-break:keep-all}
+  .progress{height:6px;background:var(--line);border-radius:999px;overflow:hidden;margin-top:10px}
+  .progress i{display:block;height:100%;background:var(--accent);width:0;transition:width .4s}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0}
+  .stat{background:var(--paper);border-radius:10px;padding:10px;text-align:center}
+  .stat b{display:block;font-size:22px;font-family:'Noto Serif KR',serif;color:var(--accent)}
+  .stat span{font-size:12px;color:var(--ink3)}
+  .collective{font-family:'Noto Serif KR',serif;font-size:17px;line-height:2;word-break:keep-all}
+  .collective p{margin:0 0 8px}
+  .collective .by{font-family:'Noto Sans KR',sans-serif;font-size:12px;color:var(--ink3);margin-left:6px}
+  .tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--line);color:var(--ink2);margin-left:6px;vertical-align:middle}
+  .tag.sel{background:#f3e4c8;color:#7a5410}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
+  select{font:inherit;font-size:14px;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink)}
+  .hidden{display:none!important}
+  .intro{font-size:15px;color:var(--ink2);word-break:keep-all}
+  .intro li{margin:4px 0}
+  a{color:var(--accent)}
+  @media (max-width:420px){ .days{grid-template-columns:repeat(7,1fr)} .poem{font-size:18px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 id="title">인생시<small id="subtitle"></small></h1>
+    <div class="who" id="who"></div>
+  </header>
+
+  <!-- 로그인 -->
+  <section id="view-login" class="hidden">
+    <div class="card">
+      <div class="eyebrow">함께 읽는 19일</div>
+      <p class="intro" id="intro-text"></p>
+      <ul class="intro">
+        <li>매일 한 구절을 읽고, 질문에 두세 문장으로 답합니다. 3분이면 충분합니다.</li>
+        <li>글은 <b>비공개</b>가 기본이며, 원하면 다른 참여자와 공유할 수 있습니다.</li>
+        <li>마지막에 각자의 "내 삶의 의미" 한 문장을 모아 <b id="pres-date"></b> 발표에서 함께 읽습니다.</li>
+      </ul>
+      <div class="field"><label for="in-name">이름</label><input id="in-name" type="text" autocomplete="name" placeholder="모임에서 쓰는 이름"></div>
+      <div class="field"><label for="in-pin">PIN (숫자 4자리)</label><input id="in-pin" type="tel" inputmode="numeric" maxlength="4" pattern="\d{4}" placeholder="●●●●"></div>
+      <div class="row"><span class="hint" style="margin:0">처음이면 이 이름과 PIN으로 등록되고, 다음부터는 같은 이름과 PIN으로 들어옵니다.</span></div>
+      <div class="row"><span></span><button class="btn" id="btn-login">시작하기</button></div>
+      <div class="status" id="login-status"></div>
+    </div>
+  </section>
+
+  <!-- 앱 -->
+  <section id="view-app" class="hidden">
+    <nav class="tabs">
+      <button data-tab="today" class="on">오늘의 구절</button>
+      <button data-tab="shared">함께 읽기</button>
+      <button data-tab="final">마무리</button>
+    </nav>
+
+    <div id="tab-today">
+      <div class="card">
+        <div class="eyebrow" id="t-eyebrow"></div>
+        <div class="week" id="t-week"></div>
+        <div class="days" id="t-days"></div>
+        <div class="poem"><span class="theme" id="t-theme"></span><br><span id="t-text"></span></div>
+        <div class="author" id="t-author"></div>
+        <div class="question"><b>오늘의 질문</b><span id="t-question"></span></div>
+        <div id="t-write">
+          <textarea id="t-textarea" placeholder="떠오르는 대로 두세 문장이면 충분합니다."></textarea>
+          <div class="row">
+            <label class="chk"><input type="checkbox" id="t-public"> 다른 참여자에게 공개</label>
+            <div style="display:flex;gap:8px">
+              <button class="btn ghost sm hidden" id="t-delete">삭제</button>
+              <button class="btn" id="t-save">저장</button>
+            </div>
+          </div>
+          <div class="status" id="t-status"></div>
+        </div>
+        <div class="hint hidden" id="t-locked"></div>
+      </div>
+      <div class="card">
+        <div class="row" style="margin:0"><span style="font-size:14px;color:var(--ink2)">나의 여정</span><span style="font-size:13px;color:var(--ink3)" id="p-text"></span></div>
+        <div class="progress"><i id="p-bar"></i></div>
+      </div>
+    </div>
+
+    <div id="tab-shared" class="hidden">
+      <div class="card">
+        <div class="eyebrow">함께 읽기</div>
+        <p class="hint" style="margin-top:6px">공개를 선택한 참여자들의 묵상입니다. 댓글이나 반응은 없습니다 — 그저 읽고, 자기 묵상으로 돌아갑니다.</p>
+        <div class="filters"><select id="s-day"></select><button class="btn ghost sm" id="s-refresh">새로고침</button></div>
+        <div class="list" id="s-list"><div class="empty">불러오는 중…</div></div>
+      </div>
+    </div>
+
+    <div id="tab-final" class="hidden">
+      <div class="card">
+        <div class="eyebrow">마무리</div>
+        <h2 style="font-family:'Noto Serif KR',serif;font-weight:600;font-size:18px;margin:6px 0" id="f-title"></h2>
+        <p class="intro" id="f-prompt"></p>
+        <div id="f-write">
+          <textarea id="f-textarea" style="min-height:110px" placeholder="내 삶의 의미는 …"></textarea>
+          <div class="row">
+            <label class="chk"><input type="checkbox" id="f-public" checked> 발표와 '우리의 시'에 포함 (공개)</label>
+            <button class="btn" id="f-save">저장</button>
+          </div>
+          <div class="status" id="f-status"></div>
+        </div>
+        <div class="hint hidden" id="f-locked"></div>
+      </div>
+      <div class="card">
+        <div class="eyebrow">우리의 시 (지금까지)</div>
+        <div class="collective" id="f-collective" style="margin-top:10px"><div class="empty">아직 모인 문장이 없습니다.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 관리자 -->
+  <section id="view-admin" class="hidden">
+    <div class="card">
+      <div class="eyebrow">관리자 — 모아보기</div>
+      <div id="a-login">
+        <div class="field"><label for="a-key">관리자 키</label><input id="a-key" type="password"></div>
+        <div class="row"><span></span><button class="btn" id="a-enter">들어가기</button></div>
+        <div class="status" id="a-status"></div>
+      </div>
+      <div id="a-body" class="hidden">
+        <div class="stats">
+          <div class="stat"><b id="a-users">–</b><span>등록 인원</span></div>
+          <div class="stat"><b id="a-count">–</b><span>묵상 수</span></div>
+          <div class="stat"><b id="a-final">–</b><span>마무리 문장</span></div>
+        </div>
+        <div class="filters">
+          <select id="a-day"><option value="">전체</option></select>
+          <select id="a-filter"><option value="">전체 글</option><option value="sel">선정된 글</option><option value="pub">공개 글</option></select>
+          <button class="btn ghost sm" id="a-refresh">새로고침</button>
+          <button class="btn sm" id="a-copy">발표용 텍스트 복사</button>
+          <button class="btn ghost sm" id="a-csv">CSV 복사</button>
+        </div>
+        <div class="status" id="a-msg"></div>
+        <div class="list" id="a-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="card hidden" id="view-noapi">
+    <div class="eyebrow" style="color:var(--warn)">설정 필요</div>
+    <p class="intro">아직 저장 서버(Apps Script) 주소가 설정되지 않았습니다. <code>config.js</code>의 <code>API_URL</code>을 채워 주세요.</p>
+  </div>
+</div>
+
+<script src="days.js"></script>
+<script src="config.js"></script>
+<script>
+(function(){
+  const P = window.PROGRAM;
+  const API = window.API_URL || "";
+  const $ = (s)=>document.querySelector(s);
+  const qs = new URLSearchParams(location.search);
+
+  // ---- 날짜 ----
+  function parseISO(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
+  function todayDate(){ const o=qs.get('today'); if(o) return parseISO(o); const n=new Date(); return new Date(n.getFullYear(),n.getMonth(),n.getDate()); }
+  const START=parseISO(P.startDate), FINAL_OPEN=parseISO(P.finalOpen), FINAL_CLOSE=parseISO(P.finalClose);
+  const TODAY=todayDate();
+  const dayDiff=(a,b)=>Math.round((a-b)/86400000);
+  const todayIdx = dayDiff(TODAY,START)+1; // 1..19, <1 before start
+  const maxUnlocked = Math.min(P.days.length, Math.max(0, todayIdx));
+  const dateOfDay=(d)=>{ const x=new Date(START); x.setDate(x.getDate()+d-1); return x; };
+  const fmt=(d)=>`${d.getMonth()+1}월 ${d.getDate()}일 (${'일월화수목금토'[d.getDay()]})`;
+  const weekOf=(d)=>P.weeks.find(w=>w.days.includes(d));
+
+  // ---- 상태 ----
+  let token=null, myName='', mine={}; // mine[day] = item
+  try{ token=localStorage.getItem('insaengsi.token'); myName=localStorage.getItem('insaengsi.name')||''; }catch(e){}
+  let curDay = Math.min(Math.max(1,todayIdx), P.days.length);
+
+  // ---- API ----
+  async function api(req){
+    if(!API) throw new Error('API_URL이 설정되지 않았습니다.');
+    if(token && !req.token) req=Object.assign({token},req);
+    const r = await fetch(API,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(req)});
+    const j = await r.json();
+    if(j && j.needLogin){ logout(); throw new Error('다시 로그인해 주세요.'); }
+    if(!j.ok) throw new Error(j.error||'오류');
+    return j;
+  }
+  const setStatus=(el,msg,cls)=>{ el.textContent=msg||''; el.className='status'+(cls?' '+cls:''); };
+
+  // ---- 라우팅 ----
+  function show(view){ ['login','app','admin'].forEach(v=>$('#view-'+v).classList.toggle('hidden',v!==view)); }
+  function route(){
+    if(location.hash==='#admin'){ show('admin'); initAdmin(); return; }
+    if(!API){ show('login'); $('#view-noapi').classList.remove('hidden'); return; }
+    if(token){ show('app'); renderWho(); loadMine(); } else show('login');
+  }
+  window.addEventListener('hashchange',route);
+
+  // ---- 공통 렌더 ----
+  $('#subtitle').textContent = `${P.author} · ${fmt(START)} ~ ${fmt(parseISO(P.endDate))}`;
+  $('#pres-date').textContent = fmt(parseISO(P.presentationDate));
+  $('#intro-text').textContent = `${P.author} 신부의 시 「목표를 가져라」를 ${P.days.length}일에 나누어 함께 읽으며, 각자 삶의 의미를 묻는 시간입니다.`;
+  function renderWho(){ $('#who').innerHTML = myName ? `<span>${esc(myName)}</span><button id="btn-logout">나가기</button>` : ''; const b=$('#btn-logout'); if(b) b.onclick=logout; }
+  function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function logout(){ token=null; myName=''; mine={}; try{localStorage.removeItem('insaengsi.token');localStorage.removeItem('insaengsi.name');}catch(e){} renderWho(); show('login'); }
+
+  // ---- 로그인 ----
+  $('#btn-login').onclick = async ()=>{
+    const name=$('#in-name').value.trim(), pin=$('#in-pin').value.trim();
+    if(!name) return setStatus($('#login-status'),'이름을 입력해 주세요.','err');
+    if(!/^\d{4}$/.test(pin)) return setStatus($('#login-status'),'PIN은 숫자 4자리입니다.','err');
+    setStatus($('#login-status'),'확인 중…');
+    try{
+      const j=await api({action:'login',name,pin});
+      token=j.token; myName=j.name;
+      try{ localStorage.setItem('insaengsi.token',token); localStorage.setItem('insaengsi.name',myName);}catch(e){}
+      setStatus($('#login-status'), j.isNew?'등록되었습니다. 환영합니다.':'', 'ok');
+      $('#in-pin').value='';
+      route();
+    }catch(e){ setStatus($('#login-status'),e.message,'err'); }
+  };
+  $('#in-pin').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#btn-login').click(); });
+
+  // ---- 탭 ----
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.toggle('on',x===b));
+    ['today','shared','final'].forEach(t=>$('#tab-'+t).classList.toggle('hidden',t!==b.dataset.tab));
+    if(b.dataset.tab==='shared') loadShared();
+    if(b.dataset.tab==='final') renderFinal();
+  });
+
+  // ---- 내 묵상 ----
+  async function loadMine(){
+    try{
+      const j=await api({action:'mine'});
+      mine={}; j.items.forEach(it=>mine[String(it.day)]=it);
+      myName=j.name; renderWho();
+    }catch(e){ /* 로그인 풀림 등 */ }
+    renderToday();
+  }
+
+  function renderToday(){
+    const d=P.days[curDay-1], w=weekOf(curDay), date=dateOfDay(curDay);
+    $('#t-eyebrow').textContent = `${curDay}일째 · ${fmt(date)}`;
+    $('#t-week').textContent = `${w.n}주차 — ${w.title}`;
+    $('#t-theme').textContent = `#${d.theme}`;
+    $('#t-text').textContent = d.text;
+    $('#t-author').textContent = `— ${P.author}`;
+    $('#t-question').textContent = d.question;
+    // day grid
+    const g=$('#t-days'); g.innerHTML='';
+    P.days.forEach(x=>{
+      const b=document.createElement('button'); b.textContent=x.day;
+      const locked = x.day>maxUnlocked;
+      b.className=[mine[String(x.day)]?'done':'', x.day===curDay?'cur':'', locked?'lock':'', x.day===todayIdx?'today':''].join(' ').trim();
+      b.disabled=locked; b.title=fmt(dateOfDay(x.day));
+      if(!locked) b.onclick=()=>{curDay=x.day; renderToday();};
+      g.appendChild(b);
+    });
+    // write area
+    const locked = curDay>maxUnlocked;
+    $('#t-write').classList.toggle('hidden',locked);
+    $('#t-locked').classList.toggle('hidden',!locked);
+    if(locked){
+      $('#t-locked').textContent = todayIdx<1 ? `${fmt(START)}에 시작합니다. 그날 첫 구절이 열립니다. (지금은 미리 읽기만 가능)` : `이 구절은 ${fmt(date)}에 열립니다.`;
+    } else {
+      const m=mine[String(curDay)];
+      $('#t-textarea').value = m?m.text:'';
+      $('#t-public').checked = m?!!m.isPublic:false;
+      $('#t-delete').classList.toggle('hidden',!m);
+      setStatus($('#t-status'), m?`저장됨 · ${m.isPublic?'공개':'비공개'} · ${(m.updatedAt||'').slice(0,10)}`:'' , m?'ok':'');
+    }
+    // progress
+    const done=Object.keys(mine).filter(k=>k!=='final').length;
+    $('#p-text').textContent = `${done} / ${P.days.length}일`;
+    $('#p-bar').style.width = `${Math.round(done/P.days.length*100)}%`;
+  }
+
+  $('#t-save').onclick = async ()=>{
+    const text=$('#t-textarea').value.trim();
+    if(!text) return setStatus($('#t-status'),'내용을 적어 주세요.','err');
+    $('#t-save').disabled=true; setStatus($('#t-status'),'저장 중…');
+    try{
+      const j=await api({action:'submit',day:String(curDay),text,isPublic:$('#t-public').checked});
+      mine[String(curDay)]=j.item; renderToday();
+    }catch(e){ setStatus($('#t-status'),e.message,'err'); }
+    $('#t-save').disabled=false;
+  };
+  $('#t-delete').onclick = async ()=>{
+    if(!mine[String(curDay)]) return;
+    if(!$('#t-delete').dataset.confirm){ $('#t-delete').dataset.confirm='1'; $('#t-delete').textContent='정말 삭제'; setTimeout(()=>{delete $('#t-delete').dataset.confirm; $('#t-delete').textContent='삭제';},3000); return; }
+    try{ await api({action:'remove',day:String(curDay)}); delete mine[String(curDay)]; renderToday(); }catch(e){ setStatus($('#t-status'),e.message,'err'); }
+    delete $('#t-delete').dataset.confirm; $('#t-delete').textContent='삭제';
+  };
+
+  // ---- 함께 읽기 ----
+  (function(){ const s=$('#s-day'); s.innerHTML=''; P.days.forEach(d=>{ const o=document.createElement('option'); o.value=d.day; o.textContent=`${d.day}일째 · ${d.theme}`; s.appendChild(o); }); s.value=String(Math.min(Math.max(1,todayIdx),P.days.length)); s.onchange=loadShared; })();
+  $('#s-refresh').onclick=loadShared;
+  async function loadShared(){
+    const day=$('#s-day').value; const L=$('#s-list'); L.innerHTML='<div class="empty">불러오는 중…</div>';
+    try{
+      const j=await api({action:'public',day});
+      if(!j.items.length){ L.innerHTML='<div class="empty">아직 공개된 묵상이 없습니다.</div>'; return; }
+      L.innerHTML=j.items.map(it=>`<div class="item"><div class="meta"><b>${esc(it.name)}</b><span>${esc((it.updatedAt||'').slice(0,10))}</span></div><div class="txt">${esc(it.text)}</div></div>`).join('');
+    }catch(e){ L.innerHTML=`<div class="empty">${esc(e.message)}</div>`; }
+  }
+
+  // ---- 마무리 ----
+  async function renderFinal(){
+    $('#f-title').textContent=P.final.title; $('#f-prompt').textContent=P.final.prompt;
+    const open = TODAY>=FINAL_OPEN && TODAY<=FINAL_CLOSE;
+    $('#f-write').classList.toggle('hidden',!open); $('#f-locked').classList.toggle('hidden',open);
+    if(!open) $('#f-locked').textContent = TODAY<FINAL_OPEN ? `마무리 글은 ${fmt(FINAL_OPEN)}부터 ${fmt(FINAL_CLOSE)}까지 적을 수 있습니다.` : `제출이 마감되었습니다. ${fmt(parseISO(P.presentationDate))} 발표에서 만나요.`;
+    const m=mine['final']; if(m){ $('#f-textarea').value=m.text; $('#f-public').checked=!!m.isPublic; setStatus($('#f-status'),`저장됨 · ${m.isPublic?'공개':'비공개'}`,'ok'); }
+    try{
+      const j=await api({action:'public',day:'final'});
+      const C=$('#f-collective');
+      C.innerHTML = j.items.length ? j.items.map(it=>`<p>${esc(it.text)}<span class="by">— ${esc(it.name)}</span></p>`).join('') : '<div class="empty">아직 모인 문장이 없습니다.</div>';
+    }catch(e){}
+  }
+  $('#f-save').onclick = async ()=>{
+    const text=$('#f-textarea').value.trim(); if(!text) return setStatus($('#f-status'),'내용을 적어 주세요.','err');
+    $('#f-save').disabled=true; setStatus($('#f-status'),'저장 중…');
+    try{ const j=await api({action:'submit',day:'final',text,isPublic:$('#f-public').checked}); mine['final']=j.item; renderFinal(); }
+    catch(e){ setStatus($('#f-status'),e.message,'err'); }
+    $('#f-save').disabled=false;
+  };
+
+  // ---- 관리자 ----
+  let adminKey='', adminItems=[], adminUsers=0, adminInit=false;
+  function initAdmin(){
+    if(adminInit) return; adminInit=true;
+    try{ adminKey=sessionStorage.getItem('insaengsi.admin')||''; }catch(e){}
+    const s=$('#a-day'); P.days.forEach(d=>{ const o=document.createElement('option'); o.value=d.day; o.textContent=`${d.day}일째 · ${d.theme}`; s.appendChild(o); });
+    const of=document.createElement('option'); of.value='final'; of.textContent='마무리 문장'; s.appendChild(of);
+    s.onchange=renderAdmin; $('#a-filter').onchange=renderAdmin; $('#a-refresh').onclick=loadAdmin;
+    $('#a-enter').onclick=()=>{ adminKey=$('#a-key').value; try{sessionStorage.setItem('insaengsi.admin',adminKey);}catch(e){} loadAdmin(); };
+    $('#a-copy').onclick=copyPresentation; $('#a-csv').onclick=copyCSV;
+    if(adminKey) loadAdmin();
+  }
+  async function loadAdmin(){
+    setStatus($('#a-status'),'불러오는 중…'); setStatus($('#a-msg'),'불러오는 중…');
+    try{
+      const j=await api({action:'admin_all',adminKey});
+      adminItems=j.items; adminUsers=j.users;
+      $('#a-login').classList.add('hidden'); $('#a-body').classList.remove('hidden');
+      setStatus($('#a-msg'),''); renderAdmin();
+    }catch(e){ setStatus($('#a-status'),e.message,'err'); setStatus($('#a-msg'),e.message,'err'); try{sessionStorage.removeItem('insaengsi.admin');}catch(_){} }
+  }
+  function renderAdmin(){
+    $('#a-users').textContent=adminUsers; $('#a-count').textContent=adminItems.filter(i=>i.day!=='final').length; $('#a-final').textContent=adminItems.filter(i=>i.day==='final').length;
+    const day=$('#a-day').value, f=$('#a-filter').value;
+    let items=adminItems.filter(i=>!day||String(i.day)===day).filter(i=>f==='sel'?i.selected:f==='pub'?i.isPublic:true);
+    items.sort((a,b)=> (a.day==='final')-(b.day==='final') || (Number(a.day)||0)-(Number(b.day)||0) || String(a.updatedAt).localeCompare(String(b.updatedAt)));
+    const L=$('#a-list');
+    if(!items.length){ L.innerHTML='<div class="empty">해당하는 글이 없습니다.</div>'; return; }
+    L.innerHTML=items.map(it=>`<div class="item"><div class="meta"><span><b>${esc(it.name)}</b> · ${it.day==='final'?'마무리':it.day+'일째'}${it.isPublic?'<span class="tag">공개</span>':'<span class="tag">비공개</span>'}${it.selected?'<span class="tag sel">선정</span>':''}</span><button class="btn ghost sm" data-id="${esc(it.id)}" data-sel="${it.selected?1:0}">${it.selected?'선정 해제':'선정'}</button></div><div class="txt">${esc(it.text)}</div></div>`).join('');
+    L.querySelectorAll('button[data-id]').forEach(b=>b.onclick=async()=>{
+      b.disabled=true;
+      try{ await api({action:'admin_select',adminKey,id:b.dataset.id,selected:b.dataset.sel!=='1'}); const it=adminItems.find(x=>x.id===b.dataset.id); it.selected=!it.selected; renderAdmin(); }
+      catch(e){ setStatus($('#a-msg'),e.message,'err'); b.disabled=false; }
+    });
+  }
+  function copyPresentation(){
+    const sel=adminItems.filter(i=>i.selected&&i.day!=='final');
+    let out=`# ${P.title}\n${P.author} · ${fmt(START)} ~ ${fmt(parseISO(P.endDate))}\n참여 ${adminUsers}명 · 묵상 ${adminItems.filter(i=>i.day!=='final').length}편\n\n`;
+    P.weeks.forEach(w=>{
+      const ws=sel.filter(i=>w.days.includes(Number(i.day))); if(!ws.length) return;
+      out+=`## ${w.n}주차 — ${w.title}\n`;
+      ws.sort((a,b)=>Number(a.day)-Number(b.day)).forEach(i=>{ const d=P.days[Number(i.day)-1]; out+=`\n[${i.day}일째 · ${d.theme}] ${i.name}\n${i.text}\n`; });
+      out+='\n';
+    });
+    const fin=adminItems.filter(i=>i.day==='final'&&i.isPublic);
+    if(fin.length){ out+=`## 우리의 시 — 내 삶의 의미\n\n`; fin.forEach(i=>out+=`${i.text}  — ${i.name}\n`); }
+    copyText(out, '발표용 텍스트를 복사했습니다.');
+  }
+  function copyCSV(){
+    const esc2=s=>`"${String(s==null?'':s).replace(/"/g,'""')}"`;
+    const rows=[['day','name','public','selected','updatedAt','text'].join(',')].concat(adminItems.map(i=>[i.day,i.name,i.isPublic,i.selected,i.updatedAt,i.text].map(esc2).join(',')));
+    copyText(rows.join('\n'),'CSV를 복사했습니다.');
+  }
+  async function copyText(t,msg){
+    try{ await navigator.clipboard.writeText(t); setStatus($('#a-msg'),msg,'ok'); }
+    catch(e){ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy'); setStatus($('#a-msg'),msg,'ok');}catch(_){ setStatus($('#a-msg'),'복사 실패 — 시트에서 직접 내보내 주세요.','err'); } ta.remove(); }
+  }
+
+  route();
+})();
+</script>
+</body>
+</html>
