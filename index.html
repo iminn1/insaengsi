@@ -284,8 +284,16 @@
     const VOICES=[['sunhi','여성 (선히)'],['injoon','남성 (인준)']];
     let voice='sunhi'; try{ voice=localStorage.getItem('insaengsi.voice')||'sunhi'; }catch(e){}
     function src(key){ return `audio/${voice}/${key}.mp3`; }
-    function stop(){ try{ a.pause(); }catch(e){} a.removeAttribute('src'); a.load(); cur=null; }
-    return { a, VOICES, src, stop, getVoice:()=>voice, setVoice:(v)=>{ voice=v; try{localStorage.setItem('insaengsi.voice',v);}catch(e){} }, cur:()=>cur, setCur:(k)=>{cur=k;} };
+    // 배경음악: 별도 루프 트랙, 낮은 음량. 음성 재생 중에만 흐르고 멈추면 서서히 사라짐
+    const bgm=new Audio('audio/bgm.mp3'); bgm.loop=true; bgm.preload='none'; const BGM_VOL=0.18;
+    let bgmOn=true; try{ bgmOn=localStorage.getItem('insaengsi.bgm')!=='off'; }catch(e){}
+    let fadeTimer=null;
+    function bgmStart(){ if(!bgmOn) return; clearInterval(fadeTimer); bgm.volume=0; bgm.play().then(()=>{ fadeTimer=setInterval(()=>{ bgm.volume=Math.min(BGM_VOL,bgm.volume+0.02); if(bgm.volume>=BGM_VOL) clearInterval(fadeTimer); },100); }).catch(()=>{}); }
+    function bgmStop(){ clearInterval(fadeTimer); if(bgm.paused) return; fadeTimer=setInterval(()=>{ bgm.volume=Math.max(0,bgm.volume-0.02); if(bgm.volume<=0){ clearInterval(fadeTimer); bgm.pause(); } },100); }
+    a.addEventListener('play',bgmStart); a.addEventListener('pause',bgmStop); a.addEventListener('ended',bgmStop); a.addEventListener('error',bgmStop);
+    function stop(){ try{ a.pause(); }catch(e){} a.removeAttribute('src'); a.load(); cur=null; bgmStop(); }
+    return { a, VOICES, src, stop, getVoice:()=>voice, setVoice:(v)=>{ voice=v; try{localStorage.setItem('insaengsi.voice',v);}catch(e){} }, cur:()=>cur, setCur:(k)=>{cur=k;},
+      bgmOn:()=>bgmOn, setBgm:(on)=>{ bgmOn=on; try{localStorage.setItem('insaengsi.bgm',on?'on':'off');}catch(e){} if(on&&!a.paused) bgmStart(); else bgmStop(); } };
   })();
   const mmss=(s)=>{ s=Math.max(0,Math.floor(s||0)); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; };
 
@@ -297,11 +305,14 @@
     const s=document.createElement('button'); s.className='btn ghost'; s.textContent='■ 정지'; s.style.display='none';
     const r=document.createElement('select'); [['0.85','느리게'],['1','보통'],['1.15','빠르게']].forEach(([v,t])=>{ const o=document.createElement('option'); o.value=v; o.textContent=t; r.appendChild(o); }); r.value='1';
     const v=document.createElement('select'); AUDIO.VOICES.forEach(([k,t])=>{ const o=document.createElement('option'); o.value=k; o.textContent=t; v.appendChild(o); }); v.value=AUDIO.getVoice();
+    const m=document.createElement('button'); m.className='btn ghost'; m.title='배경음악 켜기/끄기';
+    const mRender=()=>{ m.textContent=AUDIO.bgmOn()?'♪ 배경음악 켬':'♪ 배경음악 끔'; m.style.opacity=AUDIO.bgmOn()?'1':'.6'; };
+    mRender(); m.onclick=()=>{ AUDIO.setBgm(!AUDIO.bgmOn()); mRender(); };
     const t=document.createElement('span'); t.textContent='';
-    el.append(b,s,r,v,t);
+    el.append(b,s,r,v,m,t);
     const mine=()=>AUDIO.cur()===key;
     const reset=()=>{ b.textContent='▶ 듣기'; s.style.display='none'; t.textContent=''; };
-    const onTime=()=>{ if(mine()) t.textContent=`${mmss(a.currentTime)} / ${mmss(a.duration)}`; };
+    const onTime=()=>{ if(mine()) t.textContent=`${mmss(a.currentTime)} / ${isFinite(a.duration)?mmss(a.duration):'…'}`; };
     const onEnd=()=>{ if(mine()){ reset(); AUDIO.setCur(null); } };
     const onErr=()=>{ if(!mine()) return; AUDIO.setCur(null); el.innerHTML=''; mountListenTTS(el, paragraphs, highlightEl); };
     const onPause=()=>{ if(mine()&&!a.ended) b.textContent='▶ 이어 듣기'; };
