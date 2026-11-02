@@ -278,8 +278,52 @@
     if(ok) speechSynthesis.onvoiceschanged=()=>{};
     return { ok, play, pause, stop, setRate, isPlaying:()=>playing, isPaused:()=>paused };
   })();
-  // 문단 배열을 받아 듣기 컨트롤을 만들고, 현재 읽는 문단을 강조하는 콜백을 연결
-  function mountListen(el, paragraphs, highlightEl){
+  // ---- 미리 만든 음성 파일 재생 (audio/<voice>/<key>.mp3). 파일이 없으면 기기 음성으로 대체 ----
+  const AUDIO = (function(){
+    const a=new Audio(); a.preload='none'; let cur=null;
+    const VOICES=[['sunhi','여성 (선히)'],['injoon','남성 (인준)']];
+    let voice='sunhi'; try{ voice=localStorage.getItem('insaengsi.voice')||'sunhi'; }catch(e){}
+    function src(key){ return `audio/${voice}/${key}.mp3`; }
+    function stop(){ try{ a.pause(); }catch(e){} a.removeAttribute('src'); a.load(); cur=null; }
+    return { a, VOICES, src, stop, getVoice:()=>voice, setVoice:(v)=>{ voice=v; try{localStorage.setItem('insaengsi.voice',v);}catch(e){} }, cur:()=>cur, setCur:(k)=>{cur=k;} };
+  })();
+  const mmss=(s)=>{ s=Math.max(0,Math.floor(s||0)); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; };
+
+  // key: 'full' 또는 'day-07'. paragraphs/highlightEl 은 파일이 없을 때 기기 음성 대체용
+  function mountListen(el, key, paragraphs, highlightEl){
+    el.innerHTML='';
+    const a=AUDIO.a;
+    const b=document.createElement('button'); b.className='btn'; b.textContent='▶ 듣기';
+    const s=document.createElement('button'); s.className='btn ghost'; s.textContent='■ 정지'; s.style.display='none';
+    const r=document.createElement('select'); [['0.85','느리게'],['1','보통'],['1.15','빠르게']].forEach(([v,t])=>{ const o=document.createElement('option'); o.value=v; o.textContent=t; r.appendChild(o); }); r.value='1';
+    const v=document.createElement('select'); AUDIO.VOICES.forEach(([k,t])=>{ const o=document.createElement('option'); o.value=k; o.textContent=t; v.appendChild(o); }); v.value=AUDIO.getVoice();
+    const t=document.createElement('span'); t.textContent='';
+    el.append(b,s,r,v,t);
+    const mine=()=>AUDIO.cur()===key;
+    const reset=()=>{ b.textContent='▶ 듣기'; s.style.display='none'; t.textContent=''; };
+    const onTime=()=>{ if(mine()) t.textContent=`${mmss(a.currentTime)} / ${mmss(a.duration)}`; };
+    const onEnd=()=>{ if(mine()){ reset(); AUDIO.setCur(null); } };
+    const onErr=()=>{ if(!mine()) return; AUDIO.setCur(null); el.innerHTML=''; mountListenTTS(el, paragraphs, highlightEl); };
+    const onPause=()=>{ if(mine()&&!a.ended) b.textContent='▶ 이어 듣기'; };
+    const onPlay=()=>{ if(mine()){ b.textContent='❚❚ 일시정지'; s.style.display=''; } };
+    // 이전에 붙인 리스너 제거 후 새로 연결 (한 번에 하나의 플레이어만 활성)
+    if(AUDIO.bound) Object.entries(AUDIO.bound).forEach(([ev,fn])=>a.removeEventListener(ev,fn));
+    AUDIO.bound={timeupdate:onTime,ended:onEnd,error:onErr,pause:onPause,play:onPlay};
+    Object.entries(AUDIO.bound).forEach(([ev,fn])=>a.addEventListener(ev,fn));
+    b.onclick=()=>{
+      if(mine()){ if(a.paused) a.play().catch(()=>{}); else a.pause(); return; }
+      TTS.stop(); AUDIO.stop(); AUDIO.setCur(key);
+      a.src=AUDIO.src(key); a.playbackRate=Number(r.value); t.textContent='불러오는 중…';
+      a.play().catch(()=>{ /* error 이벤트에서 대체 처리 */ });
+    };
+    s.onclick=()=>{ AUDIO.stop(); reset(); };
+    r.onchange=()=>{ a.playbackRate=Number(r.value); };
+    v.onchange=()=>{ const was=mine()&&!a.paused; const at=mine()?a.currentTime:0; AUDIO.setVoice(v.value); if(mine()){ AUDIO.stop(); AUDIO.setCur(key); a.src=AUDIO.src(key); a.currentTime=at; a.playbackRate=Number(r.value); if(was) a.play().catch(()=>{}); } };
+    if(mine()){ b.textContent=a.paused?'▶ 이어 듣기':'❚❚ 일시정지'; s.style.display=''; onTime(); }
+  }
+
+  // 기기 내장 음성(Web Speech) 대체 — 문단 배열을 읽고 현재 문단을 강조
+  function mountListenTTS(el, paragraphs, highlightEl){
     el.innerHTML='';
     if(!TTS.ok){ el.innerHTML='<span>이 브라우저는 읽어주기를 지원하지 않습니다.</span>'; return; }
     const b=document.createElement('button'); b.className='btn'; b.textContent='▶ 듣기';
@@ -293,7 +337,7 @@
     r.onchange=()=>TTS.setRate(Number(r.value));
     el.append(b,s,r,note);
   }
-  window.addEventListener('pagehide',()=>TTS.stop());
+  window.addEventListener('pagehide',()=>{ TTS.stop(); AUDIO.stop(); });
 
   // ---- 상태 ----
   let token=null, myName='', mine={}; // mine[day] = item
@@ -330,7 +374,7 @@
     $('#pm-title').textContent=P.poemTitle;
     $('#pm-text').innerHTML=P.poem.map(p=>`<p>${esc(p)}</p>`).join('');
     $('#pm-author').textContent=`— ${P.author}`;
-    mountListen($('#pm-listen'), P.poem, $('#pm-text'));
+    mountListen($('#pm-listen'), 'full', P.poem, $('#pm-text'));
     const S=$('#pm-schedule'); let html='';
     P.weeks.forEach(w=>{ html+=`<div class="wk">${w.n}주차 · ${esc(w.title)}</div>`; w.days.forEach(n=>{ const d=P.days[n-1]; html+=`<div class="srow"><div class="shead"><b>${n}일째 · ${esc(d.theme)}</b><span>${fmt(parseISO(d.date))}</span></div>${d.full?'':`<div class="stext">${esc(d.text)}</div>`}<div class="sq">${esc(d.question)}</div></div>`; }); });
     html+=`<div class="wk">마무리</div><div class="srow"><div class="shead"><b>${esc(P.final.title)}</b><span>${fmt(FINAL_OPEN)} ~ ${fmt(FINAL_CLOSE)}</span></div><div class="sq">${esc(P.final.prompt)}</div></div>`;
@@ -361,7 +405,8 @@
   document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
     document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.toggle('on',x===b));
     ['today','poem','shared','final'].forEach(t=>$('#tab-'+t).classList.toggle('hidden',t!==b.dataset.tab));
-    TTS.stop();
+    TTS.stop(); AUDIO.stop();
+    if(b.dataset.tab==='poem') mountListen($('#pm-listen'), 'full', P.poem, $('#pm-text'));
     if(b.dataset.tab==='shared') loadShared();
     if(b.dataset.tab==='final') renderFinal();
   });
@@ -381,13 +426,13 @@
     $('#t-eyebrow').textContent = `${curDay}일째 · ${fmt(date)}`;
     $('#t-week').textContent = `${w.n}주차 — ${w.title}`;
     $('#t-theme').textContent = `#${d.theme}`;
-    TTS.stop();
+    TTS.stop(); AUDIO.stop();
     if(d.full){
       $('#t-text').innerHTML = `<span class="fullpoem" style="display:block"><b style="display:block;margin-bottom:10px">「${esc(P.poemTitle)}」</b>${P.poem.map(p=>`<p>${esc(p)}</p>`).join('')}</span>`;
-      mountListen($('#t-listen'), P.poem, $('#t-text')); $('#t-listen').classList.remove('hidden');
+      mountListen($('#t-listen'), 'full', P.poem, $('#t-text')); $('#t-listen').classList.remove('hidden');
     } else {
       $('#t-text').textContent = d.text;
-      mountListen($('#t-listen'), [d.text], null); $('#t-listen').classList.remove('hidden');
+      mountListen($('#t-listen'), `day-${String(curDay).padStart(2,'0')}`, [d.text], null); $('#t-listen').classList.remove('hidden');
     }
     $('#t-author').textContent = `— ${P.author}`;
     $('#t-question').textContent = d.question;
