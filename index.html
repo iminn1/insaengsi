@@ -77,7 +77,21 @@
   .intro{font-size:15px;color:var(--ink2);word-break:keep-all}
   .intro li{margin:4px 0}
   a{color:var(--accent)}
-  @media (max-width:420px){ .days{grid-template-columns:repeat(7,1fr)} .poem{font-size:18px} }
+  .poem-title{font-family:'Noto Serif KR',serif;font-weight:600;font-size:22px;margin:6px 0 10px}
+  .fullpoem p{margin:0 0 14px;padding:2px 4px;border-radius:6px;transition:background .2s}
+  .fullpoem p.speaking{background:var(--accent2)}
+  .listen{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0 4px;font-size:13px;color:var(--ink3)}
+  .listen .btn{padding:8px 14px;font-size:14px}
+  .listen select{padding:6px 8px;font-size:13px}
+  .schedule .srow{padding:12px 0;border-top:1px solid var(--line)}
+  .schedule .srow:first-child{border-top:0}
+  .schedule .shead{display:flex;justify-content:space-between;font-size:13px;color:var(--ink3)}
+  .schedule .shead b{color:var(--ink);font-weight:600}
+  .schedule .stext{font-family:'Noto Serif KR',serif;font-size:15px;line-height:1.75;margin:6px 0 4px;word-break:keep-all}
+  .schedule .sq{font-size:14px;color:var(--accent);word-break:keep-all}
+  .schedule .wk{margin:16px 0 4px;font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.04em}
+  nav.tabs button{font-size:13.5px;padding:9px 2px}
+  @media (max-width:420px){ .days{grid-template-columns:repeat(5,1fr)} .poem{font-size:18px} }
 </style>
 </head>
 <body>
@@ -108,16 +122,33 @@
   <!-- 앱 -->
   <section id="view-app" class="hidden">
     <nav class="tabs">
-      <button data-tab="today" class="on">오늘의 구절</button>
+      <button data-tab="today" class="on">오늘</button>
+      <button data-tab="poem">시 전문</button>
       <button data-tab="shared">함께 읽기</button>
       <button data-tab="final">마무리</button>
     </nav>
+
+    <div id="tab-poem" class="hidden">
+      <div class="card">
+        <div class="eyebrow">시 전문</div>
+        <h2 class="poem-title" id="pm-title"></h2>
+        <div class="listen" id="pm-listen"></div>
+        <div class="poem fullpoem" id="pm-text"></div>
+        <div class="author" id="pm-author"></div>
+      </div>
+      <div class="card">
+        <div class="eyebrow">15일 일정 — 구절과 질문</div>
+        <p class="hint" style="margin-top:6px">전체 흐름을 미리 볼 수 있습니다. 글쓰기는 '오늘' 탭에서 해당 날짜에 열립니다.</p>
+        <div class="schedule" id="pm-schedule"></div>
+      </div>
+    </div>
 
     <div id="tab-today">
       <div class="card">
         <div class="eyebrow" id="t-eyebrow"></div>
         <div class="week" id="t-week"></div>
         <div class="days" id="t-days"></div>
+        <div class="listen hidden" id="t-listen"></div>
         <div class="poem"><span class="theme" id="t-theme"></span><br><span id="t-text"></span></div>
         <div class="author" id="t-author"></div>
         <div class="question"><b>오늘의 질문</b><span id="t-question"></span></div>
@@ -219,17 +250,55 @@
   function todayDate(){ const o=qs.get('today'); if(o) return parseISO(o); const n=new Date(); return new Date(n.getFullYear(),n.getMonth(),n.getDate()); }
   const START=parseISO(P.startDate), FINAL_OPEN=parseISO(P.finalOpen), FINAL_CLOSE=parseISO(P.finalClose);
   const TODAY=todayDate();
-  const dayDiff=(a,b)=>Math.round((a-b)/86400000);
-  const todayIdx = dayDiff(TODAY,START)+1; // 1..19, <1 before start
-  const maxUnlocked = Math.min(P.days.length, Math.max(0, todayIdx));
-  const dateOfDay=(d)=>{ const x=new Date(START); x.setDate(x.getDate()+d-1); return x; };
+  const dateOfDay=(d)=>parseISO(P.days[d-1].date);
+  // 오늘 날짜에 해당하는(또는 가장 최근에 지난) 날의 번호. 시작 전이면 0.
+  let todayIdx=0; P.days.forEach(x=>{ if(parseISO(x.date)<=TODAY) todayIdx=x.day; });
+  const isToday=(d)=>dateOfDay(d).getTime()===TODAY.getTime();
+  const maxUnlocked = todayIdx;
   const fmt=(d)=>`${d.getMonth()+1}월 ${d.getDate()}일 (${'일월화수목금토'[d.getDay()]})`;
   const weekOf=(d)=>P.weeks.find(w=>w.days.includes(d));
+
+  // ---- 듣기 (Web Speech) ----
+  const TTS = (function(){
+    const ok = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+    let queue=[], idx=0, onIdx=null, playing=false, paused=false, rate=0.9;
+    function voice(){ const vs=speechSynthesis.getVoices(); return vs.find(v=>/^ko/i.test(v.lang)&&/Yuna|Google|Natural|Premium/i.test(v.name)) || vs.find(v=>/^ko/i.test(v.lang)) || null; }
+    function speakNext(){
+      if(!playing || idx>=queue.length){ stop(); return; }
+      const u=new SpeechSynthesisUtterance(queue[idx]); u.lang='ko-KR'; u.rate=rate; const v=voice(); if(v) u.voice=v;
+      if(onIdx) onIdx(idx);
+      u.onend=()=>{ if(playing){ idx++; speakNext(); } };
+      u.onerror=(e)=>{ if(e.error!=='interrupted'&&e.error!=='canceled'){ idx++; speakNext(); } };
+      speechSynthesis.speak(u);
+    }
+    function play(sentences, cb, startAt){ stop(); queue=sentences; onIdx=cb; idx=startAt||0; playing=true; paused=false; speakNext(); }
+    function pause(){ if(!playing) return; if(paused){ speechSynthesis.resume(); paused=false; } else { speechSynthesis.pause(); paused=true; } return paused; }
+    function stop(){ playing=false; paused=false; try{ speechSynthesis.cancel(); }catch(e){} if(onIdx) onIdx(-1); }
+    function setRate(r){ rate=r; if(playing){ const i=idx; const q=queue, cb=onIdx; play(q,cb,i); } }
+    if(ok) speechSynthesis.onvoiceschanged=()=>{};
+    return { ok, play, pause, stop, setRate, isPlaying:()=>playing, isPaused:()=>paused };
+  })();
+  // 문단 배열을 받아 듣기 컨트롤을 만들고, 현재 읽는 문단을 강조하는 콜백을 연결
+  function mountListen(el, paragraphs, highlightEl){
+    el.innerHTML='';
+    if(!TTS.ok){ el.innerHTML='<span>이 브라우저는 읽어주기를 지원하지 않습니다.</span>'; return; }
+    const b=document.createElement('button'); b.className='btn'; b.textContent='▶ 듣기';
+    const s=document.createElement('button'); s.className='btn ghost'; s.textContent='■ 정지'; s.style.display='none';
+    const r=document.createElement('select'); [['0.8','느리게'],['0.9','보통'],['1.05','빠르게']].forEach(([v,t])=>{ const o=document.createElement('option'); o.value=v; o.textContent=t; r.appendChild(o); }); r.value='0.9';
+    const note=document.createElement('span'); note.textContent='기기 내장 음성으로 읽어 줍니다';
+    const paras=()=>highlightEl?highlightEl.querySelectorAll('p'):[];
+    const hl=(i)=>{ paras().forEach((p,j)=>p.classList.toggle('speaking',j===i)); if(i<0){ b.textContent='▶ 듣기'; s.style.display='none'; } };
+    b.onclick=()=>{ if(TTS.isPlaying()){ const p=TTS.pause(); b.textContent=p?'▶ 이어 듣기':'❚❚ 일시정지'; } else { TTS.play(paragraphs,hl); b.textContent='❚❚ 일시정지'; s.style.display=''; } };
+    s.onclick=()=>TTS.stop();
+    r.onchange=()=>TTS.setRate(Number(r.value));
+    el.append(b,s,r,note);
+  }
+  window.addEventListener('pagehide',()=>TTS.stop());
 
   // ---- 상태 ----
   let token=null, myName='', mine={}; // mine[day] = item
   try{ token=localStorage.getItem('insaengsi.token'); myName=localStorage.getItem('insaengsi.name')||''; }catch(e){}
-  let curDay = Math.min(Math.max(1,todayIdx), P.days.length);
+  let curDay = Math.max(1,todayIdx);
 
   // ---- API ----
   async function api(req){
@@ -255,7 +324,18 @@
   // ---- 공통 렌더 ----
   $('#subtitle').textContent = `${P.author} · ${fmt(START)} ~ ${fmt(parseISO(P.endDate))}`;
   $('#pres-date').textContent = fmt(parseISO(P.presentationDate));
-  $('#intro-text').textContent = `${P.author} 신부의 시 「목표를 가져라」를 ${P.days.length}일에 나누어 함께 읽으며, 각자 삶의 의미를 묻는 시간입니다.`;
+  $('#intro-text').textContent = `${P.author} 신부의 시 「${P.poemTitle}」을 주중 ${P.days.length}일에 나누어 함께 읽으며, 각자 삶의 의미를 묻는 시간입니다. 첫날은 시 전체를 읽고(듣고), 이후 하루 한 구절씩 이어집니다.`;
+  // 시 전문 탭 (한 번만 렌더)
+  (function(){
+    $('#pm-title').textContent=P.poemTitle;
+    $('#pm-text').innerHTML=P.poem.map(p=>`<p>${esc(p)}</p>`).join('');
+    $('#pm-author').textContent=`— ${P.author}`;
+    mountListen($('#pm-listen'), P.poem, $('#pm-text'));
+    const S=$('#pm-schedule'); let html='';
+    P.weeks.forEach(w=>{ html+=`<div class="wk">${w.n}주차 · ${esc(w.title)}</div>`; w.days.forEach(n=>{ const d=P.days[n-1]; html+=`<div class="srow"><div class="shead"><b>${n}일째 · ${esc(d.theme)}</b><span>${fmt(parseISO(d.date))}</span></div>${d.full?'':`<div class="stext">${esc(d.text)}</div>`}<div class="sq">${esc(d.question)}</div></div>`; }); });
+    html+=`<div class="wk">마무리</div><div class="srow"><div class="shead"><b>${esc(P.final.title)}</b><span>${fmt(FINAL_OPEN)} ~ ${fmt(FINAL_CLOSE)}</span></div><div class="sq">${esc(P.final.prompt)}</div></div>`;
+    S.innerHTML=html;
+  })();
   function renderWho(){ $('#who').innerHTML = myName ? `<span>${esc(myName)}</span><button id="btn-logout">나가기</button>` : ''; const b=$('#btn-logout'); if(b) b.onclick=logout; }
   function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function logout(){ token=null; myName=''; mine={}; try{localStorage.removeItem('insaengsi.token');localStorage.removeItem('insaengsi.name');}catch(e){} renderWho(); show('login'); }
@@ -280,7 +360,8 @@
   // ---- 탭 ----
   document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
     document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.toggle('on',x===b));
-    ['today','shared','final'].forEach(t=>$('#tab-'+t).classList.toggle('hidden',t!==b.dataset.tab));
+    ['today','poem','shared','final'].forEach(t=>$('#tab-'+t).classList.toggle('hidden',t!==b.dataset.tab));
+    TTS.stop();
     if(b.dataset.tab==='shared') loadShared();
     if(b.dataset.tab==='final') renderFinal();
   });
@@ -300,7 +381,14 @@
     $('#t-eyebrow').textContent = `${curDay}일째 · ${fmt(date)}`;
     $('#t-week').textContent = `${w.n}주차 — ${w.title}`;
     $('#t-theme').textContent = `#${d.theme}`;
-    $('#t-text').textContent = d.text;
+    TTS.stop();
+    if(d.full){
+      $('#t-text').innerHTML = `<span class="fullpoem" style="display:block"><b style="display:block;margin-bottom:10px">「${esc(P.poemTitle)}」</b>${P.poem.map(p=>`<p>${esc(p)}</p>`).join('')}</span>`;
+      mountListen($('#t-listen'), P.poem, $('#t-text')); $('#t-listen').classList.remove('hidden');
+    } else {
+      $('#t-text').textContent = d.text;
+      mountListen($('#t-listen'), [d.text], null); $('#t-listen').classList.remove('hidden');
+    }
     $('#t-author').textContent = `— ${P.author}`;
     $('#t-question').textContent = d.question;
     // day grid
@@ -308,7 +396,7 @@
     P.days.forEach(x=>{
       const b=document.createElement('button'); b.textContent=x.day;
       const locked = x.day>maxUnlocked;
-      b.className=[mine[String(x.day)]?'done':'', x.day===curDay?'cur':'', locked?'lock':'', x.day===todayIdx?'today':''].join(' ').trim();
+      b.className=[mine[String(x.day)]?'done':'', x.day===curDay?'cur':'', locked?'lock':'', isToday(x.day)?'today':''].join(' ').trim();
       b.disabled=locked; b.title=fmt(dateOfDay(x.day));
       if(!locked) b.onclick=()=>{curDay=x.day; renderToday();};
       g.appendChild(b);
@@ -350,7 +438,7 @@
   };
 
   // ---- 함께 읽기 ----
-  (function(){ const s=$('#s-day'); s.innerHTML=''; P.days.forEach(d=>{ const o=document.createElement('option'); o.value=d.day; o.textContent=`${d.day}일째 · ${d.theme}`; s.appendChild(o); }); s.value=String(Math.min(Math.max(1,todayIdx),P.days.length)); s.onchange=loadShared; })();
+  (function(){ const s=$('#s-day'); s.innerHTML=''; P.days.forEach(d=>{ const o=document.createElement('option'); o.value=d.day; o.textContent=`${d.day}일째 · ${d.theme}`; s.appendChild(o); }); s.value=String(Math.max(1,todayIdx)); s.onchange=loadShared; })();
   $('#s-refresh').onclick=loadShared;
   async function loadShared(){
     const day=$('#s-day').value; const L=$('#s-list'); L.innerHTML='<div class="empty">불러오는 중…</div>';
