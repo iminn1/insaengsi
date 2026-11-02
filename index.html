@@ -281,8 +281,8 @@
   // ---- 미리 만든 음성 파일 재생 (audio/<voice>/<key>.mp3). 파일이 없으면 기기 음성으로 대체 ----
   const AUDIO = (function(){
     const a=new Audio(); a.preload='none'; let cur=null;
-    const VOICES=[['human','낭독 (모임)'],['sunhi','여성 (선히)'],['injoon','남성 (인준)']];
-    let voice='sunhi'; try{ voice=localStorage.getItem('insaengsi.voice')||'sunhi'; }catch(e){}
+    const VOICES=[['human','낭독 (모임)'],['sunhi','AI 여성'],['injoon','AI 남성']];
+    let voice='human'; try{ voice=localStorage.getItem('insaengsi.voice')||'human'; }catch(e){}
     function src(key){ return `audio/${voice}/${key}.mp3`; }
     // 배경음악: 별도 루프 트랙, 낮은 음량. 음성 재생 중에만 흐르고 멈추면 서서히 사라짐
     const bgm=new Audio('audio/bgm.mp3'); bgm.loop=true; bgm.preload='none'; const BGM_VOL=0.16;
