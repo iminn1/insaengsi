@@ -309,6 +309,7 @@
     return { a, VOICES, src, stop, getVoice:()=>voice, setVoice:(v)=>{ voice=v; try{localStorage.setItem('insaengsi.voice',v);}catch(e){} }, cur:()=>cur, setCur:(k)=>{cur=k; sync();},
       bgmPrime, bgmOn:()=>bgmOn, setBgm:(on)=>{ bgmOn=on; try{localStorage.setItem('insaengsi.bgm',on?'on':'off');}catch(e){} sync(); } };
   })();
+  window.__AUDIO=AUDIO; // 진단용
   const mmss=(s)=>{ s=Math.max(0,Math.floor(s||0)); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; };
 
   // key: 'full' 또는 'day-07'. paragraphs/highlightEl 은 파일이 없을 때 기기 음성 대체용
