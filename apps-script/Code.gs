@@ -131,7 +131,7 @@ function remove(req) {
 function publicList(req) {
   var day = req.day ? String(req.day) : null;
   var rows = readAll(REFS, REF_COLS).rows.filter(function (r) {
-    return String(r.isPublic) === 'TRUE' && (!day || String(r.day) === day);
+    return isTrue(r.isPublic) && (!day || String(r.day) === day);
   });
   rows.sort(function (a, b) { return String(b.updatedAt).localeCompare(String(a.updatedAt)); });
   return { ok: true, items: rows.map(pubView) };
@@ -158,7 +158,7 @@ function adminAll(req) {
   var rows = readAll(REFS, REF_COLS).rows;
   var users = readAll(USERS, USER_COLS).rows.length;
   return { ok: true, users: users, items: rows.map(function (r) {
-    return { id: r.id, name: r.name, day: r.day, text: r.text, isPublic: String(r.isPublic) === 'TRUE', selected: String(r.selected) === 'TRUE', updatedAt: r.updatedAt };
+    return { id: r.id, name: r.name, day: r.day, text: r.text, isPublic: isTrue(r.isPublic), selected: isTrue(r.selected), updatedAt: r.updatedAt };
   }) };
 }
 
@@ -213,8 +213,10 @@ function deleteRow(name, rowIndex) {
 
 // ---------- 유틸 ----------
 function pubView(r) {
-  return { id: r.id, name: r.name, day: r.day, text: r.text, isPublic: String(r.isPublic) === 'TRUE', updatedAt: r.updatedAt };
+  return { id: r.id, name: r.name, day: r.day, text: r.text, isPublic: isTrue(r.isPublic), updatedAt: r.updatedAt };
 }
+// 시트가 'TRUE' 문자열을 불리언으로 바꾸므로 대소문자 무관 비교
+function isTrue(v) { return String(v).toUpperCase() === 'TRUE'; }
 function clean(s, max) { return String(s || '').replace(/\s+$/, '').replace(/^\s+/, '').slice(0, max); }
 function normName(s) { return String(s || '').replace(/\s+/g, '').toLowerCase(); }
 function now() { return new Date().toISOString(); }
